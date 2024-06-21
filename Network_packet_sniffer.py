@@ -1,29 +1,26 @@
-from scapy.all import sniff, IP, TCP, UDP
+import tkinter as tk
+import pyshark
 
-def packet_callback(packet):
-    if IP in packet:
-        ip_src = packet[IP].src
-        ip_dst = packet[IP].dst
-        protocol = packet[IP].proto
+class PacketSnifferGUI:
+    def __init__(self, master):
+        self.master = master
+        master.title("Packet Sniffer")
 
-        if protocol == 6:  # TCP
-            if TCP in packet:
-                sport = packet[TCP].sport
-                dport = packet[TCP].dport
-                print(f"TCP Packet: {ip_src}:{sport} -> {ip_dst}:{dport}")
+        self.capture_button = tk.Button(master, text="Start Capture", command=self.start_capture)
+        self.capture_button.pack()
 
-        elif protocol == 17:  # UDP
-            if UDP in packet:
-                sport = packet[UDP].sport
-                dport = packet[UDP].dport
-                print(f"UDP Packet: {ip_src}:{sport} -> {ip_dst}:{dport}")
+        self.output_text = tk.Text(master)
+        self.output_text.pack()
 
-        else:
-            print(f"Other IP Packet: {ip_src} -> {ip_dst} (Protocol: {protocol})")
+    def start_capture(self):
+        capture = pyshark.LiveCapture(interface='Ethernet')
+        for packet in capture.sniff_continuously(packet_count=10):
+            self.output_text.insert(tk.END, f"Packet: {packet}\n")
+            self.output_text.insert(tk.END, f"Source IP: {packet.ip.src}\n")
+            self.output_text.insert(tk.END, f"Destination IP: {packet.ip.dst}\n")
+            self.output_text.insert(tk.END, f"Protocol: {packet.transport_layer}\n")
+            self.output_text.insert(tk.END, f"Payload: {packet}\n\n")
 
-def main():
-    # Sniff packets with a filter (in this case, IP packets only)
-    sniff(filter="ip", prn=packet_callback, store=0)
-
-if __name__ == "__main__":
-    main()
+root = tk.Tk()
+gui = PacketSnifferGUI(root)
+root.mainloop()
